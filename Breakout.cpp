@@ -10,7 +10,6 @@ Genser Andree Catalan Espina - 23401
 Angie Nadissa Vela Lopez - 23764
 
 Fecha: 10/../2024
-
 Breakout.cpp
 Programa que simula el juego Breakout implementando programación
 paralela pór medio de Pthreads
@@ -107,8 +106,35 @@ void *destruir_bloque(void *arg)
     return NULL;
 }
 
-void *logica_pelota(void *arg)
-{
+void *logica_pelota(void *arg) {
+    while (!game_over) {
+        pthread_mutex_lock(&ball_mutex);
+
+        //Borrar la pelota actual
+        mvprintw(pelota_y, pelota_x, " "); 
+
+        //Actualiza la posicion de la pelota
+        pelota_x += pelota_dir_x;
+        pelota_y += pelota_dir_y;
+
+        //Colisiones con las paredes
+        if (pelota_x <= 0 || pelota_x >= ancho_pantalla - 1) {
+            pelota_dir_x *= -1; 
+        }
+        if (pelota_y <= 0) {
+            pelota_dir_y *= -1; 
+        }
+        if (pelota_y >= alto_pantalla) {
+            game_over = true;
+        }
+
+        //Dibujar la pelota en su nueva posición
+        mvprintw(pelota_y, pelota_x, "O"); 
+        refresh();
+
+        pthread_mutex_unlock(&ball_mutex);
+        usleep(30000);  
+    }
     return NULL;
 }
 
@@ -337,6 +363,9 @@ int main()
 
     // Create blocks thread
     pthread_create(&hilo_bloques, NULL, crear_bloques, (void *)&id_bloques);
+
+    pthread_create(&hilo_pelota, NULL, logica_pelota, NULL);        //PRUEBA2
+
 
     if (n == 2) {
         // Create paddle 2 thread for two-player mode
