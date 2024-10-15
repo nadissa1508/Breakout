@@ -23,7 +23,7 @@ paralela pór medio de Pthreads
 #include <ncurses.h>
 #include <unistd.h>
 
-int ancho_pantalla = 80;
+int ancho_pantalla = 40;
 int alto_pantalla = 24;
 
 int pala1_x = 11, pala1_y = 11;
@@ -31,11 +31,14 @@ int pala2_x = 5, pala2_y = 12;
 
 int ancho_pala = 10;
 
-int pelota_x = 40, pelota_y = 12;
+int pelota_x = 20, pelota_y = 12;
 int pelota_dir_x = 1, pelota_dir_2 = 1;
 
 int puntaje_jugador1 = 0;
 int puntaje_jugador2 = 0;
+
+volatile int lastKeyPressedP1 = ERR;
+volatile int lastKeyPressedP2 = ERR;
 
 class Bloque
 {
@@ -70,44 +73,6 @@ pthread_mutex_t paddle_mutex;
 pthread_barrier_t barrera;
 
 
-//Definicion de quien es la pala y dibujarla
-void mover_pala(int jugador, int &pala_x, int pala_y, char pala_char) {
-    while (!game_over) {
-        pthread_mutex_lock(&paddle_mutex);
-
-        // Crear un array que represente la pala
-        char pala[ancho_pala];
-        for (int i = 0; i < ancho_pala; ++i) {
-            pala[i] = pala_char;
-        }
-
-        // Limpiar la pala actual de la pantalla
-        mvprintw(pala_y, pala_x, std::string(ancho_pala, ' ').c_str());
-
-        // Detectar el jugador y ajustar la posición si se presiona una tecla
-        int key = getch();
-        if (jugador == 1) {  // Jugador 1 con flechas
-            if (key == KEY_LEFT && pala_x > 0) {
-                pala_x -= 1;
-            } else if (key == KEY_RIGHT && pala_x < ancho_pantalla - ancho_pala) {
-                pala_x += 1;
-            }
-        } else if (jugador == 2) {  // Jugador 2 con 'A' y 'D'
-            if (key == 'a' && pala_x > 0) {
-                pala_x -= 1;
-            } else if (key == 'd' && pala_x < ancho_pantalla - ancho_pala) {
-                pala_x += 1;
-            }
-        }
-
-        // Redibujar la pala en su nueva posición
-        mvprintw(pala_y, pala_x, std::string(pala, pala + ancho_pala).c_str());
-        refresh();
-
-        pthread_mutex_unlock(&paddle_mutex);
-        usleep(30000);  // Delay to control frame rate
-    }
-}
 
 void *crear_bloques(void *arg)
 {
@@ -147,6 +112,26 @@ void *logica_pelota(void *arg)
     return NULL;
 }
 
+void *handle_input(void *arg)
+{
+    while (!game_over) {
+        int ch = getch();
+        if (ch != ERR) {
+            if (ch == KEY_LEFT) {
+                lastKeyPressedP1 = KEY_LEFT;
+            } else if (ch == KEY_RIGHT) {
+                lastKeyPressedP1 = KEY_RIGHT;
+            } else if (ch == 'a') {
+                lastKeyPressedP2 = 'a';
+            } else if (ch == 'd') {
+                lastKeyPressedP2 = 'd';
+            }
+        }
+        usleep(1000); // Sleep for 1ms to reduce CPU usage
+    }
+    return NULL;
+}
+
 void *logica_pala1(void *arg)
 {
     while (!game_over) {
@@ -155,13 +140,15 @@ void *logica_pala1(void *arg)
         // Borrar la pala actual
         mvprintw(pala1_y, pala1_x, std::string(ancho_pala, ' ').c_str());
 
-        int key = getch();
         // Mover la pala 1 con las teclas de flecha
-        if (key == KEY_LEFT && pala1_x > 0) {
+        if (lastKeyPressedP1 == KEY_LEFT && pala1_x > 0) {
             pala1_x -= 1;
-        } else if (key == KEY_RIGHT && pala1_x < ancho_pantalla - ancho_pala) {
+        } else if (lastKeyPressedP1 == KEY_RIGHT && pala1_x < ancho_pantalla - ancho_pala) {
             pala1_x += 1;
         }
+
+        // Reset last key pressed
+        lastKeyPressedP1 = ERR;
 
         // Redibujar la pala en la nueva posición
         mvprintw(pala1_y, pala1_x, std::string(ancho_pala, '=').c_str());
@@ -181,13 +168,15 @@ void *logica_pala2(void *arg)
         // Borrar la pala actual
         mvprintw(pala2_y, pala2_x, std::string(ancho_pala, ' ').c_str());
 
-        int key = getch();
         // Mover la pala 2 con las teclas 'A' y 'D'
-        if (key == 'a' && pala2_x > 0) {
+        if (lastKeyPressedP2 == 'a' && pala2_x > 0) {
             pala2_x -= 1;
-        } else if (key == 'd' && pala2_x < ancho_pantalla - ancho_pala) {
+        } else if (lastKeyPressedP2 == 'd' && pala2_x < ancho_pantalla - ancho_pala) {
             pala2_x += 1;
         }
+
+        // Reset last key pressed
+        lastKeyPressedP2 = ERR;
 
         // Redibujar la pala en la nueva posición
         mvprintw(pala2_y, pala2_x, std::string(ancho_pala, '_').c_str());
@@ -261,6 +250,8 @@ void actualizar_pantalla()
 
 }
 
+
+
 /*
 
   ____                 _               _   
@@ -275,13 +266,13 @@ int main()
 { 
    // Initialize ncurses
     initscr();            // Start ncurses mode
-    cbreak();             // Disable line buffering
+    cbreak();
     keypad(stdscr, TRUE); // Enable special keys like arrow keys
-    noecho();             // Don't show typed characters
     curs_set(0);          // Hide the cursor
+    noecho();
 
     int n = 0;
-    int ancho = 80;
+    int ancho = 40;
     int alto = 25;
 
      // Obtener el tamaño actual de la terminal
@@ -302,9 +293,9 @@ int main()
 
     // Clear screen and display title
     clear();
-    mvprintw(0, 0, " ____                 _               _");
+    mvprintw(0, 0, " ____                 _                _");
     mvprintw(1, 0, "| __ ) _ __ ___  __ _| | ______  _   _| |_");
-    mvprintw(2, 0, "|  _ -| '__/ _ -/ _ | |/  / _ -| | | | __|");
+    mvprintw(2, 0, "|  _ -| '__/ _ -/ _  | |/  / _ -| | | | __|");
     mvprintw(3, 0, "| |_) | | |  __/ (_| |    < (_) | |_| | |_ ");
     mvprintw(4, 0, "|____/|_|  -___|-__,_|_|-__-___/ -__,_|-__|");
     refresh(); 
@@ -325,10 +316,18 @@ int main()
     }
 
     // Initialize threads and variables
-    pthread_t hilo_pala1, hilo_pala2, hilo_pelota, hilo_bloques;
+    pthread_t hilo_pala1, hilo_pala2, hilo_pelota, hilo_bloques, hilo_input;
     int id_pala1 = 1, id_pala2 = 2, id_pelota = 3, id_bloques = 4;
 
+
+    pthread_mutex_init(&ball_mutex, NULL);
+    pthread_mutex_init(&paddle_mutex, NULL);
+    
+
     pthread_barrier_init(&barrera, NULL, 2);
+    
+    // Hilo que controla los inputs del usuario
+    pthread_create(&hilo_input, NULL, handle_input, NULL);
 
     // Create paddle 1 thread
     pthread_create(&hilo_pala1, NULL, logica_pala1, (void *)&id_pala1);
@@ -351,6 +350,7 @@ int main()
     actualizar_pantalla();
 
     // Join threads to ensure they complete
+    pthread_join(hilo_input, NULL);
     pthread_join(hilo_pala1, NULL);
     pthread_join(hilo_pelota, NULL);
     pthread_join(hilo_bloques, NULL);
