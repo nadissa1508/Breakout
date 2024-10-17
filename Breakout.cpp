@@ -23,21 +23,24 @@ paralela pór medio de Pthreads
 #include <unistd.h>
 
 int ancho_pantalla = 40;
-int alto_pantalla = 24;
+int alto_pantalla = 15;
 
 int pala1_x = 11, pala1_y = 11;
 int pala2_x = 5, pala2_y = 12;
 
 int ancho_pala = 10;
 
-int pelota_x = 20, pelota_y = 12;
-int pelota_dir_x = 1, pelota_dir_2 = 1;
+int pelota_x = ancho_pantalla / 2;
+int pelota_y = pala1_y - 1;
+int pelota_dir_x = 1, pelota_dir_y = -1;
 
 int puntaje_jugador1 = 0;
 int puntaje_jugador2 = 0;
 
-volatile int lastKeyPressedP1 = ERR;
-volatile int lastKeyPressedP2 = ERR;
+volatile int ControlP1 = ERR;
+volatile int ControlP2 = ERR;
+
+bool ball_moving = false;
 
 class Bloque
 {
@@ -101,39 +104,125 @@ void *crear_bloques(void *arg)
     return NULL;
 }
 
-void *destruir_bloque(void *arg)
-{
-    return NULL;
+bool destruir_bloque(int x, int y) {
+    // Coliciones con bloques de resistenca 3
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n3[i][j].getEstado() == 1 && y == i && x / 2 == j) {
+                matriz_n3[i][j].reducirResistencia();
+                if (matriz_n3[i][j].getResistencia() == 0) {
+                    matriz_n3[i][j].setEstado(0);
+                    puntaje_jugador1 += matriz_n3[i][j].getValorBloque();
+                }
+                return true;
+            }
+        }
+    }
+
+    // Coliciones con bloques de resistenca 2
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n2[i][j].getEstado() == 1 && y == i + 2 && x / 2 == j) {
+                matriz_n2[i][j].reducirResistencia();
+                if (matriz_n2[i][j].getResistencia() == 0) {
+                    matriz_n2[i][j].setEstado(0);
+                    puntaje_jugador1 += matriz_n2[i][j].getValorBloque();
+                }
+                return true;
+            }
+        }
+    }
+
+    // Coliciones con bloques de resistenca 1
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n1[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
+                matriz_n1[i][j].reducirResistencia();
+                if (matriz_n1[i][j].getResistencia() == 0) {
+                    matriz_n1[i][j].setEstado(0);
+                    puntaje_jugador1 += matriz_n1[i][j].getValorBloque();
+                }
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void *logica_pelota(void *arg) {
     while (!game_over) {
         pthread_mutex_lock(&ball_mutex);
 
-        //Borrar la pelota actual
-        mvprintw(pelota_y, pelota_x, " "); 
+        if (ball_moving) {
+            // Borrar la pelota actual
+            mvprintw(pelota_y, pelota_x, " "); 
 
-        //Actualiza la posicion de la pelota
-        pelota_x += pelota_dir_x;
-        pelota_y += pelota_dir_y;
+            // Calcular nueva posición
+            int new_x = pelota_x + pelota_dir_x;
+            int new_y = pelota_y + pelota_dir_y;
 
-        //Colisiones con las paredes
-        if (pelota_x <= 0 || pelota_x >= ancho_pantalla - 1) {
-            pelota_dir_x *= -1; 
-        }
-        if (pelota_y <= 0) {
-            pelota_dir_y *= -1; 
-        }
-        if (pelota_y >= alto_pantalla) {
-            game_over = true;
-        }
+            // Comprobar colisión con bloques
+            bool block_hit = destruir_bloque(new_x, new_y);
 
-        //Dibujar la pelota en su nueva posición
-        mvprintw(pelota_y, pelota_x, "O"); 
-        refresh();
+            if (block_hit) {
+                // Cambiar dirección basado en desde dónde vino la pelota
+                if (pelota_dir_x != 0 && (new_x % 2 == 0 || new_x % 2 == 1)) {
+                    pelota_dir_x *= 1;
+                }
+                pelota_dir_y *= -1;
+            } else {
+                // Si no hay colisión con bloques, actualizar posición
+                pelota_x = new_x;
+                pelota_y = new_y;
+            }
+
+            // Colisiones con las paredes
+            if (pelota_x <= 0 || pelota_x >= ancho_pantalla - 1) {
+                pelota_dir_x *= -1; 
+            }
+            if (pelota_y <= 0) {
+                pelota_dir_y *= -1; 
+            }
+            if (pelota_y >= alto_pantalla - 1) {
+                game_over = true;
+            }
+
+            // Colisión con la pala 1
+            if (pelota_y == pala1_y - 1 && pelota_x >= pala1_x && pelota_x < pala1_x + ancho_pala) {
+                pelota_dir_y = -1;
+                // Cambiar dirección horizontal basado en dónde golpea la pelota
+                int hit_position = pelota_x - pala1_x;
+                if (hit_position < ancho_pala / 3) {
+                    pelota_dir_x = -1;
+                } else if (hit_position > (2 * ancho_pala) / 3) {
+                    pelota_dir_x = 1;
+                } else {
+                    pelota_dir_x = 0;
+                }
+            }
+
+            // Colisión con la pala 2 (si está en modo dos jugadores)
+            if (pelota_y == pala2_y + 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
+                pelota_dir_y = 1;
+                // Cambiar dirección horizontal basado en dónde golpea la pelota
+                int hit_position = pelota_x - pala2_x;
+                if (hit_position < ancho_pala / 3) {
+                    pelota_dir_x = -1;
+                } else if (hit_position > (2 * ancho_pala) / 3) {
+                    pelota_dir_x = 1;
+                } else {
+                    pelota_dir_x = 0;
+                }
+            }
+
+            // Dibujar la pelota en su nueva posición
+            mvprintw(pelota_y, pelota_x, "O"); 
+            refresh();
+        }
 
         pthread_mutex_unlock(&ball_mutex);
-        usleep(30000);  
+        usleep(200000);  
     }
     return NULL;
 }
@@ -143,17 +232,20 @@ void *handle_input(void *arg)
     while (!game_over) {
         int ch = getch();
         if (ch != ERR) {
+            if (!ball_moving) {
+                ball_moving = true;
+            }
             if (ch == KEY_LEFT) {
-                lastKeyPressedP1 = KEY_LEFT;
+                ControlP1 = KEY_LEFT;
             } else if (ch == KEY_RIGHT) {
-                lastKeyPressedP1 = KEY_RIGHT;
+                ControlP1 = KEY_RIGHT;
             } else if (ch == 'a') {
-                lastKeyPressedP2 = 'a';
+                ControlP2 = 'a';
             } else if (ch == 'd') {
-                lastKeyPressedP2 = 'd';
+                ControlP2 = 'd';
             }
         }
-        usleep(1000); // Sleep for 1ms to reduce CPU usage
+        usleep(1000);
     }
     return NULL;
 }
@@ -167,14 +259,14 @@ void *logica_pala1(void *arg)
         mvprintw(pala1_y, pala1_x, std::string(ancho_pala, ' ').c_str());
 
         // Mover la pala 1 con las teclas de flecha
-        if (lastKeyPressedP1 == KEY_LEFT && pala1_x > 0) {
+        if (ControlP1 == KEY_LEFT && pala1_x > 0) {
             pala1_x -= 1;
-        } else if (lastKeyPressedP1 == KEY_RIGHT && pala1_x < ancho_pantalla - ancho_pala) {
+        } else if (ControlP1 == KEY_RIGHT && pala1_x < ancho_pantalla - ancho_pala) {
             pala1_x += 1;
         }
 
         // Reset last key pressed
-        lastKeyPressedP1 = ERR;
+        ControlP1 = ERR;
 
         // Redibujar la pala en la nueva posición
         mvprintw(pala1_y, pala1_x, std::string(ancho_pala, '=').c_str());
@@ -195,14 +287,14 @@ void *logica_pala2(void *arg)
         mvprintw(pala2_y, pala2_x, std::string(ancho_pala, ' ').c_str());
 
         // Mover la pala 2 con las teclas 'A' y 'D'
-        if (lastKeyPressedP2 == 'a' && pala2_x > 0) {
+        if (ControlP2 == 'a' && pala2_x > 0) {
             pala2_x -= 1;
-        } else if (lastKeyPressedP2 == 'd' && pala2_x < ancho_pantalla - ancho_pala) {
+        } else if (ControlP2 == 'd' && pala2_x < ancho_pantalla - ancho_pala) {
             pala2_x += 1;
         }
 
         // Reset last key pressed
-        lastKeyPressedP2 = ERR;
+        ControlP2 = ERR;
 
         // Redibujar la pala en la nueva posición
         mvprintw(pala2_y, pala2_x, std::string(ancho_pala, '_').c_str());
