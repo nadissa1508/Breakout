@@ -25,8 +25,8 @@ paralela pór medio de Pthreads
 int ancho_pantalla = 40;
 int alto_pantalla = 15;
 
-int pala1_x = 15, pala1_y = 15;
-int pala2_x = 9, pala2_y = 16;
+int pala1_x = 11, pala1_y = 13;
+int pala2_x = 5, pala2_y = 14;
 
 int ancho_pala = 10;
 
@@ -75,8 +75,6 @@ pthread_mutex_t paddle_mutex;
 pthread_mutex_t points_mutex;
 pthread_barrier_t barrera;
 
-
-
 void *crear_bloques(void *arg)
 {
     for (int i = 0; i < 2; i++)
@@ -109,16 +107,17 @@ bool destruir_bloque(int x, int y, int idJugador) {
     // Coliciones con bloques de resistenca 3
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
-            if (matriz_n3[i][j].getEstado() == 1 && y == i + 2 && x / 2 == j) {
+            if (matriz_n3[i][j].getEstado() == 1 && y == i && x / 2 == j) {
                 matriz_n3[i][j].reducirResistencia();
                 if (matriz_n3[i][j].getResistencia() == 0) {
-                    pthread_mutex_lock(&points_mutex);
+                   pthread_mutex_lock(&points_mutex);
                     matriz_n3[i][j].setEstado(0);
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n3[i][j].getValorBloque();
                     }else{
                         puntaje_jugador2 += matriz_n3[i][j].getValorBloque();
                     }
+                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -129,7 +128,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
     // Coliciones con bloques de resistenca 2
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
-            if (matriz_n2[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
+            if (matriz_n2[i][j].getEstado() == 1 && y == i + 2 && x / 2 == j) {
                 matriz_n2[i][j].reducirResistencia();
                 if (matriz_n2[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
@@ -139,6 +138,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     }else{
                         puntaje_jugador2 += matriz_n2[i][j].getValorBloque();
                     }
+                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -149,9 +149,9 @@ bool destruir_bloque(int x, int y, int idJugador) {
     // Coliciones con bloques de resistenca 1
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 20; j++) {
-            if (matriz_n1[i][j].getEstado() == 1 && y == i + 6 && x / 2 == j) {
+            if (matriz_n1[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
                 matriz_n1[i][j].reducirResistencia();
-                if (matriz_n1[i][j].getResistencia() == 0) {
+                if (matriz_n1[i][j].getResistencia() <= 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n1[i][j].setEstado(0);
                     if(idJugador == 1){
@@ -159,6 +159,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     }else{
                         puntaje_jugador2 += matriz_n1[i][j].getValorBloque();
                     }
+                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);                    
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -182,7 +183,6 @@ void *logica_pelota(void *arg) {
             int new_y = pelota_y + pelota_dir_y;
 
             // Comprobar colisión con bloques
-            //falta encontrar la forma de averiguar si el que golpeo la pelota fue la pala 1 o 2
             bool block_hit = destruir_bloque(new_x, new_y, 1);
 
             if (block_hit) {
@@ -242,7 +242,7 @@ void *logica_pelota(void *arg) {
         }
 
         pthread_mutex_unlock(&ball_mutex);
-        usleep(200000);  
+        usleep(300000);  
     }
     return NULL;
 }
@@ -342,8 +342,6 @@ void actualizar_pantalla()
 {
     clear();
 
-    mvprintw(0 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
-
     // impresion bloques + -> nivel 3
     for (int i = 0; i < 2; i++)
     {
@@ -351,7 +349,7 @@ void actualizar_pantalla()
         {
             if (matriz_n3[i][j].getEstado() == 1)
             {
-                mvprintw(i + 2, j*2, "+ ");
+                mvprintw(i , j*2, "+ ");
             }
         }
         //printf("\n");
@@ -364,7 +362,7 @@ void actualizar_pantalla()
         {
             if (matriz_n2[i][j].getEstado() == 1)
             {
-                mvprintw(i + 4, j * 2, "# ");
+                mvprintw(i + 2, j * 2, "# ");
             }
         }
       
@@ -377,13 +375,14 @@ void actualizar_pantalla()
         {
             if (matriz_n1[i][j].getEstado() == 1)
             {
-                mvprintw(i + 6, j * 2, "-");
+                mvprintw(i + 4, j * 2, "-");
             }
         }
        // printf("\n");
     }
 
-   
+    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+
     refresh();
     
 
@@ -458,6 +457,7 @@ int main()
     // Initialize threads and variables
     pthread_t hilo_pala1, hilo_pala2, hilo_pelota, hilo_bloques, hilo_input;
     int id_pala1 = 1, id_pala2 = 2, id_pelota = 3, id_bloques = 4;
+
 
     pthread_mutex_init(&ball_mutex, NULL);
     pthread_mutex_init(&paddle_mutex, NULL);
