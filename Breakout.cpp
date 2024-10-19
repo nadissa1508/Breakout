@@ -218,15 +218,27 @@ bool destruir_bloque(int x, int y, int idJugador) {
     return false;
 }
 
+bool todos_bloques_destruidos() {
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n3[i][j].getEstado() == 1 || matriz_n2[i][j].getEstado() == 1 || matriz_n1[i][j].getEstado() == 1) {
+                return false;  // Aún hay bloques en pie
+            }
+        }
+    }
+    return true;  // Todos los bloques han sido destruidos
+}
+
+
 void *logica_pelota(void *arg) {
     while (!game_over) {
-        pthread_mutex_lock(&ball_mutex);
+        pthread_mutex_lock(&ball_mutex);  // Asegura el acceso exclusivo a la pelota
 
         if (ball_moving) {
-            // Borrar la pelota actual
+            // Borrar la pelota actual en la pantalla
             mvprintw(pelota_y, pelota_x, " "); 
 
-            // Calcular nueva posición
+            // Calcular nueva posición de la pelota
             int new_x = pelota_x + pelota_dir_x;
             int new_y = pelota_y + pelota_dir_y;
 
@@ -235,9 +247,6 @@ void *logica_pelota(void *arg) {
 
             if (block_hit) {
                 // Cambiar dirección basado en desde dónde vino la pelota
-                if (pelota_dir_x != 0 && (new_x % 2 == 0 || new_x % 2 == 1)) {
-                    pelota_dir_x *= 1;
-                }
                 pelota_dir_y *= -1;
             } else {
                 // Si no hay colisión con bloques, actualizar posición
@@ -245,21 +254,37 @@ void *logica_pelota(void *arg) {
                 pelota_y = new_y;
             }
 
-            // Colisiones con las paredes
+            // Colisiones con las paredes laterales
             if (pelota_x <= 0 || pelota_x >= ancho_pantalla - 1) {
-                pelota_dir_x *= -1; 
+                pelota_dir_x *= -1;  // Rebota en las paredes izquierda y derecha
             }
+            // Colisión con la parte superior
             if (pelota_y <= 0) {
-                pelota_dir_y *= -1; 
-            }
-            if (pelota_y >= alto_pantalla - 1) {
-                game_over = true;
+                pelota_dir_y *= -1;  // Rebota en la parte superior
             }
 
-            // Colisión con la pala 1
+            // Lógica del "Game Over"
+            if (pelota_y >= alto_pantalla + 2) {  // Si la pelota cae por debajo de la pantalla
+                game_over = true;
+                clear();  // Limpia la pantalla para mostrar el mensaje
+                mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Perdiste! Game Over!");
+                refresh();  // Refresca la pantalla para mostrar el mensaje
+                break;  // Salir del bucle
+            }
+
+            // Lógica de "Ganaste"
+            if (todos_bloques_destruidos()) {  // Si se destruyen todos los bloques
+                game_over = true;
+                clear();  // Limpia la pantalla para mostrar el mensaje
+                mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Ganaste! Game Over!");
+                refresh();  // Refresca la pantalla para mostrar el mensaje
+                break;  // Salir del bucle
+            }
+
+            // Colisión con la pala 1 (jugador 1)
             if (pelota_y == pala1_y - 1 && pelota_x >= pala1_x && pelota_x < pala1_x + ancho_pala) {
-                pelota_dir_y = -1;
-                // Cambiar dirección horizontal basado en dónde golpea la pelota
+                pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
+                // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala1_x;
                 if (hit_position < ancho_pala / 3) {
                     pelota_dir_x = -1;
@@ -270,10 +295,10 @@ void *logica_pelota(void *arg) {
                 }
             }
 
-            // Colisión con la pala 2 (si está en modo dos jugadores)
+            // Colisión con la pala 2 (jugador 2)
             if (pelota_y == pala2_y + 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
-                pelota_dir_y = 1;
-                // Cambiar dirección horizontal basado en dónde golpea la pelota
+                pelota_dir_y = 1;  // Cambia la dirección de la pelota al chocar con la pala
+                // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala2_x;
                 if (hit_position < ancho_pala / 3) {
                     pelota_dir_x = -1;
@@ -286,11 +311,11 @@ void *logica_pelota(void *arg) {
 
             // Dibujar la pelota en su nueva posición
             mvprintw(pelota_y, pelota_x, "O"); 
-            refresh();
+            refresh();  // Refrescar la pantalla
         }
 
-        pthread_mutex_unlock(&ball_mutex);
-        usleep(300000);  
+        pthread_mutex_unlock(&ball_mutex);  // Liberar el mutex
+        usleep(300000);  // Controlar la velocidad del juego (pausa en microsegundos)
     }
     return NULL;
 }
