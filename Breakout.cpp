@@ -1,8 +1,8 @@
 /*---------------------------------------
 UNIVERSIDAD DEL VALLE DE GUATEMALA
 CC3056 - Programacion de Microprocesadores
-Colaboradores:
 
+Colaboradores:
 Jorge Luis Felipe Aguilar Portillo - 23195
 Ricardo Arturo Godínez Sanchez - 23247
 Vianka Vanessa Castro Ordoñez - 23201
@@ -10,10 +10,16 @@ Genser Andree Catalan Espina - 23401
 Angie Nadissa Vela Lopez - 23764
 
 Fecha: 10/../2024
-Breakout.cpp
-Programa que simula el juego Breakout implementando programación
-paralela pór medio de Pthreads
+Proyecto: Breakout implementado con Phtreads
+Archivo: Breakout.cpp
+
+Descripción: Este programa simula el clásico juego Breakout,
+utilizando programación multihilo mediante Phtreads para
+dividir las tareas de control de la pelota, palas y bloques. 
+Se empleo la biblioteca ncurses para mostrar el jeugo en la terminal. 
 ---------------------------------------*/
+
+/*Bibliotecas importadas*/
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -21,27 +27,41 @@ paralela pór medio de Pthreads
 #include <ncurses.h>
 #include <unistd.h>
 
+
+/*Variables Globales*/
+// Dimensiones de la pantalla
 int ancho_pantalla = 40;
 int alto_pantalla = 15;
 
+// Dimensiones de las palas
 int pala1_x = 11, pala1_y = 13;
 int pala2_x = 5, pala2_y = 14;
-
 int ancho_pala = 10;
-
+// Variables de la pelota
 int pelota_x = ancho_pantalla / 2;
 int pelota_y = pala1_y - 1;
 int pelota_dir_x = 1, pelota_dir_y = -1;
-
+// Puntaje de los jugadores
 int puntaje_jugador1 = 0;
 int puntaje_jugador2 = 0;
 
+//Control de las palas 
 volatile int ControlP1 = ERR;
 volatile int ControlP2 = ERR;
 
-
+// Estado del juego
 bool ball_moving = false;
 
+/*Clase Bloque 
+Descripción: Define las características de los bloques destructibles. 
+Atributos: 
+- estado: Determina si el bloque está activo (1) o destruido (0).
+- valorBloque: Valor en puntos que otorga el bloque al ser destruido.
+- resistencia: Número de golpes que puede resistir el bloque antes de ser destruido. 
+Métodos: 
+- Getters y setters para manipular los atributos. 
+- reducirResistencia: Reduce la resistencia del bloque en 1
+*/
 class Bloque
 {
 private:
@@ -61,6 +81,7 @@ public:
     void reducirResistencia() { resistencia--; }
 };
 
+/* Matrices de bloques */
 // bloques +
 Bloque matriz_n3[2][20];
 // bloques #
@@ -75,6 +96,10 @@ pthread_mutex_t paddle_mutex;
 pthread_mutex_t points_mutex;
 pthread_barrier_t barrera;
 
+/* Funcion crear_bloques
+Descripción: Inicializa los bloques en la matriz, asignando resistencia
+ademas de el valor de cada bloque segun su nivel
+*/
 void *crear_bloques(void *arg)
 {
     for (int i = 0; i < 2; i++)
@@ -99,12 +124,15 @@ void *crear_bloques(void *arg)
             matriz_n1[i][j].setValorBloque(1);
         }
     }
+    //Sincroniza los hilos
     pthread_barrier_wait(&barrera);
     return NULL;
 }
 
 /*
-Función para imprimir bloques en la pantalla
+Función actualizar_pantalla
+Descripción: Imprimir bloques en la pantalla cada vez
+que ocurre un cambio
 */
 void actualizar_pantalla()
 {
@@ -145,12 +173,20 @@ void actualizar_pantalla()
             }
         }
     }
-
+    //Muestreo de puntaje
     mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
     refresh();
 
 }
 
+/* destruir_bloque
+Descripción: Verifica si la pelota ha chocado con un bloque 
+actualiza la pantalla y el estado del bloque a muerto y 
+el puntaje del jugador
+Parámetros:
+- x, y: coordenadas de la pelota
+- idJugador: identificacion de quien destruyo el bloque
+*/
 bool destruir_bloque(int x, int y, int idJugador) {
     // Coliciones con bloques de resistenca 3
     for (int i = 0; i < 2; i++) {
@@ -218,6 +254,11 @@ bool destruir_bloque(int x, int y, int idJugador) {
     return false;
 }
 
+/* todos_bloques_destruidos
+Verificación de estados de los bloques
+false: existen bloques en el juego
+true: todos los bloques han sido destruidos
+*/
 bool todos_bloques_destruidos() {
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
@@ -229,7 +270,13 @@ bool todos_bloques_destruidos() {
     return true;  // Todos los bloques han sido destruidos
 }
 
-
+/*Funcion logica_pelota
+Descripción: Verifica el estado de la pelota y colisiones con 
+otros elementos como pala, paredes y bloques. 
+Parámetro:
+- velocidad_pelota: para modificar el tiempo de pausa para que
+se redibuje otra vez
+*/
 void *logica_pelota(void *arg) {
     int velocidad_pelota = *(int*)arg; //Recibir la velocidad de la pelota;
 
@@ -322,6 +369,10 @@ void *logica_pelota(void *arg) {
     return NULL;
 }
 
+/*Funcion handle_input
+Descripción: Captura la entrada del teclado para mover
+las palas y activar el movimiento de la pelota
+*/
 void *handle_input(void *arg)
 {
     while (!game_over) {
@@ -330,10 +381,12 @@ void *handle_input(void *arg)
             if (!ball_moving) {
                 ball_moving = true;
             }
+            // Jugador 1
             if (ch == KEY_LEFT) {
                 ControlP1 = KEY_LEFT;
             } else if (ch == KEY_RIGHT) {
                 ControlP1 = KEY_RIGHT;
+            // Jugador 2
             } else if (ch == 'a') {
                 ControlP2 = 'a';
             } else if (ch == 'd') {
@@ -345,6 +398,9 @@ void *handle_input(void *arg)
     return NULL;
 }
 
+/*Funcion logica_pala1
+Descripción: Mueve la pala del jugador 1 de acuerdo con las flechas del teclado
+*/
 void *logica_pala1(void *arg)
 {
     while (!game_over) {
@@ -360,7 +416,7 @@ void *logica_pala1(void *arg)
             pala1_x += 1;
         }
 
-        // Reset last key pressed
+        // Resetear la ultima tecla
         ControlP1 = ERR;
 
         // Redibujar la pala en la nueva posición
@@ -368,11 +424,14 @@ void *logica_pala1(void *arg)
         refresh();
 
         pthread_mutex_unlock(&paddle_mutex);
-        usleep(30000);  // Control del frame rate
+        usleep(30000);  // Velocidad de la pala
     }
     return NULL;
 }
 
+/*Funcion logica_pala2
+Descripción: Mueve la pala del jugador 2 de acuerdo con las teclas "a" y "d"
+*/
 void *logica_pala2(void *arg)
 {
     while (!game_over) {
@@ -388,7 +447,7 @@ void *logica_pala2(void *arg)
             pala2_x += 1;
         }
 
-        // Reset last key pressed
+        // Resetear a la ultima tecla presionada
         ControlP2 = ERR;
 
         // Redibujar la pala en la nueva posición
@@ -396,20 +455,33 @@ void *logica_pala2(void *arg)
         refresh();
 
         pthread_mutex_unlock(&paddle_mutex);
-        usleep(30000);  // Control del frame rate
+        usleep(30000);  // Velocidad pala
     }
     return NULL;
 }
 
+/*Funcion sumar_puntaje
+*/
 void *sumar_puntaje(void *arg)
 {
     return NULL;
 }
-
+/*Funcion verificar_puntaje
+*/
 void verificar_puntaje()
 {
 }
-
+/*Funcion titulo
+Descripción: Imprimir el titulo del juego
+*/
+void titulo(){
+clear();
+    mvprintw(0, 0, " ____                 _                _");
+    mvprintw(1, 0, "| __ ) _ __ ___  __ _| | ______  _   _| |_");
+    mvprintw(2, 0, "|  _ -| '__/ _ -/ _  | |/  / _ -| | | | __|");
+    mvprintw(3, 0, "| |_) | | |  __/ (_| |    < (_) | |_| | |_ ");
+    mvprintw(4, 0, "|____/|_|  -___|-__,_|_|-__-___/ -__,_|-__|");
+}
 /*
 
   ____                 _               _   
@@ -422,17 +494,20 @@ void verificar_puntaje()
 
 int main()
 { 
-   // Initialize ncurses
-    initscr();            // Start ncurses mode
+   // Inicalizacion de ncurses
+    initscr();            // inicio del modo ncurses
     cbreak();
-    keypad(stdscr, TRUE); // Enable special keys like arrow keys
-    curs_set(0);          // Hide the cursor
+    keypad(stdscr, TRUE); // Habilitar el uso de flechas 
+    curs_set(0);          // Esconder el cursor
     noecho();
 
-    int n = 0;
+
+    int n = 0; //opcion de jugador
+    // Dimensiones de terminal
     int ancho = 40;
     int alto = 25;
-    int modo;
+
+    int modo; //opcion de dificultad
     int velocidad_pelota;
 
      // Obtener el tamaño actual de la terminal
@@ -451,16 +526,23 @@ int main()
     box(ventana, 0, 0);     // Dibuja un borde alrededor de la ventana
     wrefresh(ventana);      // Actualiza la ventana para mostrar los cambios
 
-    // Clear screen and display title
+    // Limpiar la pantalla y mostrar el titulo
+    titulo();
+    mvprintw(6, 0, "Instrucciones del juego:");
+    mvprintw(7, 0, "1. Usa las flechas izquierda y derecha para mover la pala 1 (jugador 1).");
+    mvprintw(8, 0, "2. El jugador 2 utiliza las teclas 'A' y 'D' para mover la pala 2.");
+    mvprintw(9, 0, "3. El objetivo es evitar que la pelota caiga usando las palas.");
+    mvprintw(10, 0, "4. Destruye los bloques con la pelota para sumar puntos.");
+    mvprintw(11, 0, "5. Ganas si destruyes todos los bloques.");
+    mvprintw(12, 0, "6. Pierdes si la pelota cae fuera de la pantalla.");
+    mvprintw(13, 0, "¡Buena suerte!");
+    mvprintw(14, 0, "Presiona cualquier tecla para comenzar...");
+    refresh();
+    getch();
     clear();
-    mvprintw(0, 0, " ____                 _                _");
-    mvprintw(1, 0, "| __ ) _ __ ___  __ _| | ______  _   _| |_");
-    mvprintw(2, 0, "|  _ -| '__/ _ -/ _  | |/  / _ -| | | | __|");
-    mvprintw(3, 0, "| |_) | | |  __/ (_| |    < (_) | |_| | |_ ");
-    mvprintw(4, 0, "|____/|_|  -___|-__,_|_|-__-___/ -__,_|-__|");
-    refresh(); 
 
-    // Ask for game mode
+    titulo();
+    // Preguntar modo de juego
     mvprintw(6, 0, "Seleccione el modo de juego: \n");
     mvprintw(7, 0, "1. Un jugador \n");
     mvprintw(8, 0, "2. Dos jugadores\n");
@@ -471,11 +553,11 @@ int main()
     if (scanw("%d", &n) != 1 || (n != 1 && n != 2)) {
         mvprintw(10, 0, "Error: Entrada no válida.");
         refresh();
-        endwin(); // Properly end ncurses
+        endwin(); // terminar ncurses
         return 1;
     }
 
-    //Elegir dificultad
+    // Preguntar la dificultad
     mvprintw(11,0, "Seleccione la dificultad: \n");
     mvprintw(12, 0, "1. Modo Fácil\n");
     mvprintw(13, 0, "2. Modo Difícil\n");
@@ -486,7 +568,7 @@ int main()
     if (scanw("%d", &modo) != 1 || (modo != 1 && modo != 2)) {
         mvprintw(15, 0, "Error: Entrada no válida.");
         refresh();
-        endwin(); // termine ncurses
+        endwin(); // terminar ncurses
         return 1;
     }
 
@@ -497,8 +579,7 @@ int main()
         velocidad_pelota = 150000; // Modo Difícil 
     }
 
-
-    // Initialize threads and variables
+    // Inicializar hilos y variables 
     pthread_t hilo_pala1, hilo_pala2, hilo_pelota, hilo_bloques, hilo_input;
     int id_pala1 = 1, id_pala2 = 2, id_bloques = 4;
 
@@ -506,36 +587,34 @@ int main()
     pthread_mutex_init(&ball_mutex, NULL);
     pthread_mutex_init(&paddle_mutex, NULL);
     pthread_mutex_init(&points_mutex, NULL);
-
     pthread_barrier_init(&barrera, NULL, 2);
     
     // Hilo que controla los inputs del usuario
     pthread_create(&hilo_input, NULL, handle_input, NULL);
 
-    // Create paddle 1 thread
+    // Crear hilo pala 1
     pthread_create(&hilo_pala1, NULL, logica_pala1, (void *)&id_pala1);
 
-    // Create ball thread
+    // Crear hilo pelota
     pthread_create(&hilo_pelota, NULL, logica_pelota, (void *)&velocidad_pelota);
 
-    // Create blocks thread
+    // Crear hilo bloques
     pthread_create(&hilo_bloques, NULL, crear_bloques, (void *)&id_bloques);
 
    // pthread_create(&hilo_pelota, NULL, logica_pelota, NULL);        //PRUEBA2
 
 
     if (n == 2) {
-        // Create paddle 2 thread for two-player mode
+        // Si el modo es de dos jugadores crear hilo pala 2
         pthread_create(&hilo_pala2, NULL, logica_pala2, (void *)&id_pala2);
     }
 
-    // Wait for all threads to synchronize (e.g., block creation)
+    //  Esperar que se sincronicen los hilos 
     pthread_barrier_wait(&barrera);
 
-    // Game logic and display updates (to be implemented)
     actualizar_pantalla();
 
-    // Join threads to ensure they complete
+    // Unir hilos y verificar que terminen
     pthread_join(hilo_input, NULL);
     pthread_join(hilo_pala1, NULL);
     pthread_join(hilo_pelota, NULL);
@@ -545,7 +624,7 @@ int main()
         pthread_join(hilo_pala2, NULL);
     }
 
-    // Clean up resources
+    // Limpiar recursos
     pthread_mutex_destroy(&ball_mutex);
     pthread_mutex_destroy(&paddle_mutex);
     pthread_mutex_destroy(&points_mutex);
@@ -556,7 +635,7 @@ int main()
 
     // Limpiar y cerrar
     delwin(ventana);
-    endwin();  // Properly end ncurses
+    endwin();  // Terminar ncurses
 
     return 0;
 }
