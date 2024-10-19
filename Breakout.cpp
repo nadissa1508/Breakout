@@ -14,7 +14,6 @@ Breakout.cpp
 Programa que simula el juego Breakout implementando programación
 paralela pór medio de Pthreads
 ---------------------------------------*/
-
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -39,6 +38,7 @@ int puntaje_jugador2 = 0;
 
 volatile int ControlP1 = ERR;
 volatile int ControlP2 = ERR;
+
 
 bool ball_moving = false;
 
@@ -231,6 +231,8 @@ bool todos_bloques_destruidos() {
 
 
 void *logica_pelota(void *arg) {
+    int velocidad_pelota = *(int*)arg; //Recibir la velocidad de la pelota;
+
     while (!game_over) {
         pthread_mutex_lock(&ball_mutex);  // Asegura el acceso exclusivo a la pelota
 
@@ -264,7 +266,7 @@ void *logica_pelota(void *arg) {
             }
 
             // Lógica del "Game Over"
-            if (pelota_y >= alto_pantalla + 2) {  // Si la pelota cae por debajo de la pantalla
+            if (pelota_y >= alto_pantalla + 1) {  // Si la pelota cae por debajo de la pantalla
                 game_over = true;
                 clear();  // Limpia la pantalla para mostrar el mensaje
                 mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Perdiste! Game Over!");
@@ -296,8 +298,8 @@ void *logica_pelota(void *arg) {
             }
 
             // Colisión con la pala 2 (jugador 2)
-            if (pelota_y == pala2_y + 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
-                pelota_dir_y = 1;  // Cambia la dirección de la pelota al chocar con la pala
+            if (pelota_y == pala2_y - 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
+                pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
                 // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala2_x;
                 if (hit_position < ancho_pala / 3) {
@@ -315,7 +317,7 @@ void *logica_pelota(void *arg) {
         }
 
         pthread_mutex_unlock(&ball_mutex);  // Liberar el mutex
-        usleep(300000);  // Controlar la velocidad del juego (pausa en microsegundos)
+        usleep(velocidad_pelota);  // Controlar la velocidad del juego (pausa en microsegundos)
     }
     return NULL;
 }
@@ -408,7 +410,6 @@ void verificar_puntaje()
 {
 }
 
-
 /*
 
   ____                 _               _   
@@ -431,6 +432,8 @@ int main()
     int n = 0;
     int ancho = 40;
     int alto = 25;
+    int modo;
+    int velocidad_pelota;
 
      // Obtener el tamaño actual de la terminal
     int max_y, max_x;
@@ -464,7 +467,7 @@ int main()
     mvprintw(9, 0, ">> ");
     refresh();
 
-    // Validate input
+     // Leer entrada para el número de jugadores
     if (scanw("%d", &n) != 1 || (n != 1 && n != 2)) {
         mvprintw(10, 0, "Error: Entrada no válida.");
         refresh();
@@ -472,9 +475,32 @@ int main()
         return 1;
     }
 
+    //Elegir dificultad
+    mvprintw(11,0, "Seleccione la dificultad: \n");
+    mvprintw(12, 0, "1. Modo Fácil\n");
+    mvprintw(13, 0, "2. Modo Difícil\n");
+    mvprintw(14, 0, ">> ");
+    refresh();
+
+     // Leer entrada para el modo de juego
+    if (scanw("%d", &modo) != 1 || (modo != 1 && modo != 2)) {
+        mvprintw(15, 0, "Error: Entrada no válida.");
+        refresh();
+        endwin(); // termine ncurses
+        return 1;
+    }
+
+    // Determinar la velocidad en función de la dificultad
+    if (modo == 1) {
+        velocidad_pelota = 300000; // Modo Fácil 
+    } else {
+        velocidad_pelota = 150000; // Modo Difícil 
+    }
+
+
     // Initialize threads and variables
     pthread_t hilo_pala1, hilo_pala2, hilo_pelota, hilo_bloques, hilo_input;
-    int id_pala1 = 1, id_pala2 = 2, id_pelota = 3, id_bloques = 4;
+    int id_pala1 = 1, id_pala2 = 2, id_bloques = 4;
 
 
     pthread_mutex_init(&ball_mutex, NULL);
@@ -490,12 +516,12 @@ int main()
     pthread_create(&hilo_pala1, NULL, logica_pala1, (void *)&id_pala1);
 
     // Create ball thread
-    pthread_create(&hilo_pelota, NULL, logica_pelota, (void *)&id_pelota);
+    pthread_create(&hilo_pelota, NULL, logica_pelota, (void *)&velocidad_pelota);
 
     // Create blocks thread
     pthread_create(&hilo_bloques, NULL, crear_bloques, (void *)&id_bloques);
 
-    pthread_create(&hilo_pelota, NULL, logica_pelota, NULL);        //PRUEBA2
+   // pthread_create(&hilo_pelota, NULL, logica_pelota, NULL);        //PRUEBA2
 
 
     if (n == 2) {
