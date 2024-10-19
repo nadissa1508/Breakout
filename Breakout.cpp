@@ -94,6 +94,7 @@ bool game_over = false;
 pthread_mutex_t ball_mutex;
 pthread_mutex_t paddle_mutex;
 pthread_mutex_t points_mutex;
+pthread_mutex_t screen_mutex;
 pthread_barrier_t barrera;
 
 /* Funcion crear_bloques
@@ -124,7 +125,7 @@ void *crear_bloques(void *arg)
             matriz_n1[i][j].setValorBloque(1);
         }
     }
-    //Sincroniza los hilos
+    //Sincroniza los hilos para que esperen a que se creen todos los bloques
     pthread_barrier_wait(&barrera);
     return NULL;
 }
@@ -136,6 +137,7 @@ que ocurre un cambio
 */
 void actualizar_pantalla()
 {
+    pthread_mutex_lock(&screen_mutex);
     clear();
 
     // impresion bloques + -> nivel 3
@@ -176,6 +178,8 @@ void actualizar_pantalla()
     //Muestreo de puntaje
     mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
     refresh();
+    pthread_mutex_unlock(&screen_mutex);
+    usleep(1000);
 
 }
 
@@ -587,7 +591,8 @@ int main()
     pthread_mutex_init(&ball_mutex, NULL);
     pthread_mutex_init(&paddle_mutex, NULL);
     pthread_mutex_init(&points_mutex, NULL);
-    pthread_barrier_init(&barrera, NULL, 2);
+    pthread_mutex_init(&screen_mutex, NULL);
+    pthread_barrier_init(&barrera, NULL, 5);
     
     // Hilo que controla los inputs del usuario
     pthread_create(&hilo_input, NULL, handle_input, NULL);
@@ -628,6 +633,7 @@ int main()
     pthread_mutex_destroy(&ball_mutex);
     pthread_mutex_destroy(&paddle_mutex);
     pthread_mutex_destroy(&points_mutex);
+    pthread_mutex_destroy(&screen_mutex);
     pthread_barrier_destroy(&barrera);
 
     // Esperar una tecla para salir
