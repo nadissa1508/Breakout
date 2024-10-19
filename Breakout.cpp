@@ -65,7 +65,7 @@ public:
 Bloque matriz_n3[2][20];
 // bloques #
 Bloque matriz_n2[2][20];
-// bloques ▄
+// bloques -
 Bloque matriz_n1[3][20];
 
 bool game_over = false;
@@ -103,6 +103,54 @@ void *crear_bloques(void *arg)
     return NULL;
 }
 
+/*
+Función para imprimir bloques en la pantalla
+*/
+void actualizar_pantalla()
+{
+    clear();
+
+    // impresion bloques + -> nivel 3
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 20; j++)
+        {
+            if (matriz_n3[i][j].getEstado() == 1)
+            {
+                mvprintw(i , j*2, "+ ");
+            }
+        }
+    }
+
+    // impresion bloques # -> nivel 2
+    for (int i = 0; i < 2; i++)
+    {
+        for (int j = 0; j < 20; j++)
+        {
+            if (matriz_n2[i][j].getEstado() == 1)
+            {
+                mvprintw(i + 2, j * 2, "# ");
+            }
+        }
+    }
+
+    // impresion bloques - -> nivel 1
+    for (int i = 0; i < 3; i++)
+    {
+        for (int j = 0; j < 20; j++)
+        {
+            if (matriz_n1[i][j].getEstado() == 1)
+            {
+                mvprintw(i + 4, j * 2, "-");
+            }
+        }
+    }
+
+    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+    refresh();
+
+}
+
 bool destruir_bloque(int x, int y, int idJugador) {
     // Coliciones con bloques de resistenca 3
     for (int i = 0; i < 2; i++) {
@@ -117,7 +165,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     }else{
                         puntaje_jugador2 += matriz_n3[i][j].getValorBloque();
                     }
-                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+                    actualizar_pantalla();
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -138,7 +186,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     }else{
                         puntaje_jugador2 += matriz_n2[i][j].getValorBloque();
                     }
-                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+                    actualizar_pantalla();
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -151,7 +199,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
         for (int j = 0; j < 20; j++) {
             if (matriz_n1[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
                 matriz_n1[i][j].reducirResistencia();
-                if (matriz_n1[i][j].getResistencia() <= 0) {
+                if (matriz_n1[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n1[i][j].setEstado(0);
                     if(idJugador == 1){
@@ -159,7 +207,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     }else{
                         puntaje_jugador2 += matriz_n1[i][j].getValorBloque();
                     }
-                    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);                    
+                    actualizar_pantalla();
                     pthread_mutex_unlock(&points_mutex);
                 }
                 return true;
@@ -334,61 +382,6 @@ void *sumar_puntaje(void *arg)
 void verificar_puntaje()
 {
 }
-
-/*
-Función para imprimir bloques en la pantalla
-*/
-void actualizar_pantalla()
-{
-    clear();
-
-    // impresion bloques + -> nivel 3
-    for (int i = 0; i < 2; i++)
-    {
-        for (int j = 0; j < 20; j++)
-        {
-            if (matriz_n3[i][j].getEstado() == 1)
-            {
-                mvprintw(i , j*2, "+ ");
-            }
-        }
-        //printf("\n");
-    }
-
-    // impresion bloques # -> nivel 2
-    for (int i = 0; i < 2; i++)
-    {
-        for (int j = 0; j < 20; j++)
-        {
-            if (matriz_n2[i][j].getEstado() == 1)
-            {
-                mvprintw(i + 2, j * 2, "# ");
-            }
-        }
-      
-    }
-
-    // impresion bloques ▄ -> nivel 1
-    for (int i = 0; i < 3; i++)
-    {
-        for (int j = 0; j < 20; j++)
-        {
-            if (matriz_n1[i][j].getEstado() == 1)
-            {
-                mvprintw(i + 4, j * 2, "-");
-            }
-        }
-       // printf("\n");
-    }
-
-    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
-
-    refresh();
-    
-
-
-}
-
 
 
 /*
