@@ -49,6 +49,9 @@ int puntaje_jugador2 = 0;
 volatile int ControlP1 = ERR;
 volatile int ControlP2 = ERR;
 
+//Contador de los bloques destruidos
+int blockCount = 0;  
+
 // Estado del juego
 bool ball_moving = false;
 
@@ -175,6 +178,9 @@ void actualizar_pantalla()
     }
     //Muestreo de puntaje
     mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+    
+    //Mostrar el contador de bloques destruidos
+    mvprintw(16, 0, "Bloques destruidos: %d", blockCount);
     refresh();
 
 }
@@ -196,6 +202,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n3[i][j].getResistencia() == 0) {
                    pthread_mutex_lock(&points_mutex);
                     matriz_n3[i][j].setEstado(0);
+                    blockCount++; //HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n3[i][j].getValorBloque();
                     }else{
@@ -217,6 +224,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n2[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n2[i][j].setEstado(0);
+                    blockCount++; //holaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
                     if(idJugador == 2){
                         puntaje_jugador1 += matriz_n2[i][j].getValorBloque();
                     }else{
@@ -238,6 +246,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n1[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n1[i][j].setEstado(0);
+                    blockCount++; //HOLAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n1[i][j].getValorBloque();
                     }else{
