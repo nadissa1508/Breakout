@@ -217,7 +217,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n2[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n2[i][j].setEstado(0);
-                    if(idJugador == 1){
+                    if(idJugador == 2){
                         puntaje_jugador1 += matriz_n2[i][j].getValorBloque();
                     }else{
                         puntaje_jugador2 += matriz_n2[i][j].getValorBloque();
@@ -279,6 +279,8 @@ se redibuje otra vez
 */
 void *logica_pelota(void *arg) {
     int velocidad_pelota = *(int*)arg; //Recibir la velocidad de la pelota;
+	int num_jugador=1;  // Variable para definir que jugador fue el ultimo en tocar la pelota 
+						// Se usara con su funcion de colision de pala 1 y 2
 
     while (!game_over) {
         pthread_mutex_lock(&ball_mutex);  // Asegura el acceso exclusivo a la pelota
@@ -292,7 +294,7 @@ void *logica_pelota(void *arg) {
             int new_y = pelota_y + pelota_dir_y;
 
             // Comprobar colisión con bloques
-            bool block_hit = destruir_bloque(new_x, new_y, 1);
+            bool block_hit = destruir_bloque(new_x, new_y, num_jugador);
 
             if (block_hit) {
                 // Cambiar dirección basado en desde dónde vino la pelota
@@ -333,6 +335,7 @@ void *logica_pelota(void *arg) {
             // Colisión con la pala 1 (jugador 1)
             if (pelota_y == pala1_y - 1 && pelota_x >= pala1_x && pelota_x < pala1_x + ancho_pala) {
                 pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
+				num_jugador = 1;
                 // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala1_x;
                 if (hit_position < ancho_pala / 3) {
@@ -347,6 +350,7 @@ void *logica_pelota(void *arg) {
             // Colisión con la pala 2 (jugador 2)
             if (pelota_y == pala2_y - 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
                 pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
+				num_jugador =2;
                 // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala2_x;
                 if (hit_position < ancho_pala / 3) {
