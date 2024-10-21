@@ -29,6 +29,7 @@ Se empleo la biblioteca ncurses para mostrar el jeugo en la terminal.
 
 
 /*Variables Globales*/
+
 // Dimensiones de la pantalla
 int ancho_pantalla = 40;
 int alto_pantalla = 15;
@@ -49,8 +50,14 @@ int puntaje_jugador2 = 0;
 volatile int ControlP1 = ERR;
 volatile int ControlP2 = ERR;
 
+//Contador de los bloques destruidos
+int blockCount = 0;  
+
 // Estado del juego
 bool ball_moving = false;
+
+//Modo de juego (1 u 2 jugadores)
+int n;
 
 /*Clase Bloque 
 Descripción: Define las características de los bloques destructibles. 
@@ -173,10 +180,18 @@ void actualizar_pantalla()
             }
         }
     }
-    //Muestreo de puntaje
-    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
-    refresh();
 
+    //Puntajes segun el numero de jugadores
+    if (n == 1) {  //Modo de un jugador
+        mvprintw(15, 0, "Puntaje jugador 1: %d", puntaje_jugador1);
+    } else if (n == 2) { //Modo de dos jugadores
+        mvprintw(15, 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+    }
+
+    //Contador de bloques destruidos 
+    mvprintw(16, 0, "Bloques destruidos: %d", blockCount);
+
+    refresh();
 }
 
 /* destruir_bloque
@@ -196,6 +211,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n3[i][j].getResistencia() == 0) {
                    pthread_mutex_lock(&points_mutex);
                     matriz_n3[i][j].setEstado(0);
+                    blockCount++; 
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n3[i][j].getValorBloque();
                     }else{
@@ -209,7 +225,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
         }
     }
 
-    // Coliciones con bloques de resistenca 2
+    //Coliciones con bloques de resistenca 2
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
             if (matriz_n2[i][j].getEstado() == 1 && y == i + 2 && x / 2 == j) {
@@ -217,7 +233,8 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n2[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n2[i][j].setEstado(0);
-                    if(idJugador == 1){
+                    blockCount++; 
+                    if(idJugador == 2){
                         puntaje_jugador1 += matriz_n2[i][j].getValorBloque();
                     }else{
                         puntaje_jugador2 += matriz_n2[i][j].getValorBloque();
@@ -230,7 +247,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
         }
     }
 
-    // Coliciones con bloques de resistenca 1
+    //Coliciones con bloques de resistenca 1
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 20; j++) {
             if (matriz_n1[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
@@ -238,6 +255,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                 if (matriz_n1[i][j].getResistencia() == 0) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n1[i][j].setEstado(0);
+                    blockCount++; 
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n1[i][j].getValorBloque();
                     }else{
@@ -278,7 +296,10 @@ Parámetro:
 se redibuje otra vez
 */
 void *logica_pelota(void *arg) {
-    int velocidad_pelota = *(int*)arg; //Recibir la velocidad de la pelota;
+    int velocidad_pelota = *(int*)arg; // Recibir la velocidad de la pelota
+    int num_jugador = 1;  // Variable para definir qué jugador fue el último en tocar la pelota
+    int puntos_jugador1 = 0; // Puntos del jugador 1
+    int puntos_jugador2 = 0; // Puntos del jugador 2
 
     while (!game_over) {
         pthread_mutex_lock(&ball_mutex);  // Asegura el acceso exclusivo a la pelota
@@ -292,9 +313,15 @@ void *logica_pelota(void *arg) {
             int new_y = pelota_y + pelota_dir_y;
 
             // Comprobar colisión con bloques
-            bool block_hit = destruir_bloque(new_x, new_y, 1);
-
+            bool block_hit = destruir_bloque(new_x, new_y, num_jugador);
             if (block_hit) {
+                // Incrementar puntos
+                if (num_jugador == 1) {
+                    puntos_jugador1++;
+                } else if (num_jugador == 2) {
+                    puntos_jugador2++;
+                }
+
                 // Cambiar dirección basado en desde dónde vino la pelota
                 pelota_dir_y *= -1;
             } else {
@@ -312,27 +339,59 @@ void *logica_pelota(void *arg) {
                 pelota_dir_y *= -1;  // Rebota en la parte superior
             }
 
-            // Lógica del "Game Over"
+            // Logica del "Game Over"
             if (pelota_y >= alto_pantalla + 1) {  // Si la pelota cae por debajo de la pantalla
                 game_over = true;
                 clear();  // Limpia la pantalla para mostrar el mensaje
-                mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Perdiste! Game Over!");
+
+                //Modo de un jugador
+                if (n == 1) {
+                    mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Perdiste! Game Over!");
+                }
+                //Modo de dos jugadores
+                else {
+                    if (puntos_jugador1 > puntos_jugador2) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
+                    } else if (puntos_jugador2 > puntos_jugador1) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
+                    } else {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
+                    }
+                }
+
+                refresh();  // Refresca la pantalla para mostrar el mensaje
+                break;  
+            }
+
+            //Lógica de "Ganaste"
+            if (todos_bloques_destruidos()) {  // Si se destruyen todos los bloques
+                game_over = true;
+                clear();  
+
+                // Modo de un jugador
+                if (n == 1) {
+                    mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Felicidades, Game Over!");
+                }
+                // Modo de dos jugadores
+                else {
+                    if (puntos_jugador1 > puntos_jugador2) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
+                    } else if (puntos_jugador2 > puntos_jugador1) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
+                    } else {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
+                    }
+                }
+
                 refresh();  // Refresca la pantalla para mostrar el mensaje
                 break;  // Salir del bucle
             }
 
-            // Lógica de "Ganaste"
-            if (todos_bloques_destruidos()) {  // Si se destruyen todos los bloques
-                game_over = true;
-                clear();  // Limpia la pantalla para mostrar el mensaje
-                mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Ganaste! Game Over!");
-                refresh();  // Refresca la pantalla para mostrar el mensaje
-                break;  // Salir del bucle
-            }
 
             // Colisión con la pala 1 (jugador 1)
             if (pelota_y == pala1_y - 1 && pelota_x >= pala1_x && pelota_x < pala1_x + ancho_pala) {
                 pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
+                num_jugador = 1;
                 // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala1_x;
                 if (hit_position < ancho_pala / 3) {
@@ -347,6 +406,7 @@ void *logica_pelota(void *arg) {
             // Colisión con la pala 2 (jugador 2)
             if (pelota_y == pala2_y - 1 && pelota_x >= pala2_x && pelota_x < pala2_x + ancho_pala) {
                 pelota_dir_y = -1;  // Cambia la dirección de la pelota al chocar con la pala
+                num_jugador = 2;
                 // Cambiar dirección horizontal basado en dónde golpea la pelota en la pala
                 int hit_position = pelota_x - pala2_x;
                 if (hit_position < ancho_pala / 3) {
@@ -368,6 +428,7 @@ void *logica_pelota(void *arg) {
     }
     return NULL;
 }
+
 
 /*Funcion handle_input
 Descripción: Captura la entrada del teclado para mover
@@ -502,7 +563,7 @@ int main()
     noecho();
 
 
-    int n = 0; //opcion de jugador
+    n = 0; //opcion de jugador
     // Dimensiones de terminal
     int ancho = 40;
     int alto = 25;
