@@ -56,6 +56,9 @@ int blockCount = 0;
 // Estado del juego
 bool ball_moving = false;
 
+//Modo de juego (1 u 2 jugadores)
+int n;
+
 /*Clase Bloque 
 Descripción: Define las características de los bloques destructibles. 
 Atributos: 
@@ -336,34 +339,40 @@ void *logica_pelota(void *arg) {
                 game_over = true;
                 clear();  // Limpia la pantalla para mostrar el mensaje
 
+                //Modo de un jugador
                 if (n == 1) {
                     mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Perdiste! Game Over!");
-                } else {
+                }
+                //Modo de dos jugadores
+                else {
                     if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con mas puntos: 1");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
                     } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con mas puntos: 2");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
                 }
 
                 refresh();  // Refresca la pantalla para mostrar el mensaje
-                break;  // Salir del bucle
+                break;  
             }
 
-            // Lógica de "Ganaste"
+            //Lógica de "Ganaste"
             if (todos_bloques_destruidos()) {  // Si se destruyen todos los bloques
                 game_over = true;
-                clear();  // Limpia la pantalla para mostrar el mensaje
+                clear();  
 
+                // Modo de un jugador
                 if (n == 1) {
                     mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 5, "Felicidades, Game Over!");
-                } else {
+                }
+                // Modo de dos jugadores
+                else {
                     if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con mas puntos: 1");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
                     } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con mas puntos: 2");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
@@ -372,6 +381,7 @@ void *logica_pelota(void *arg) {
                 refresh();  // Refresca la pantalla para mostrar el mensaje
                 break;  // Salir del bucle
             }
+
 
             // Colisión con la pala 1 (jugador 1)
             if (pelota_y == pala1_y - 1 && pelota_x >= pala1_x && pelota_x < pala1_x + ancho_pala) {
@@ -548,7 +558,7 @@ int main()
     noecho();
 
 
-    int n = 0; //opcion de jugador
+    n = 0; //opcion de jugador
     // Dimensiones de terminal
     int ancho = 40;
     int alto = 25;
