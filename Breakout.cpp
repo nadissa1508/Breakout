@@ -180,13 +180,18 @@ void actualizar_pantalla()
             }
         }
     }
-    //Muestreo de puntaje
-    mvprintw(15 , 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
-    
-    //Mostrar el contador de bloques destruidos
-    mvprintw(16, 0, "Bloques destruidos: %d", blockCount);
-    refresh();
 
+    //Puntajes segun el numero de jugadores
+    if (n == 1) {  //Modo de un jugador
+        mvprintw(15, 0, "Puntaje jugador 1: %d", puntaje_jugador1);
+    } else if (n == 2) { //Modo de dos jugadores
+        mvprintw(15, 0, "Puntaje jugador 1: %d | Puntaje jugador 2: %d", puntaje_jugador1, puntaje_jugador2);
+    }
+
+    //Contador de bloques destruidos 
+    mvprintw(16, 0, "Bloques destruidos: %d", blockCount);
+
+    refresh();
 }
 
 /* destruir_bloque
@@ -220,7 +225,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
         }
     }
 
-    // Coliciones con bloques de resistenca 2
+    //Coliciones con bloques de resistenca 2
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
             if (matriz_n2[i][j].getEstado() == 1 && y == i + 2 && x / 2 == j) {
@@ -242,7 +247,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
         }
     }
 
-    // Coliciones con bloques de resistenca 1
+    //Coliciones con bloques de resistenca 1
     for (int i = 0; i < 3; i++) {
         for (int j = 0; j < 20; j++) {
             if (matriz_n1[i][j].getEstado() == 1 && y == i + 4 && x / 2 == j) {
@@ -334,7 +339,7 @@ void *logica_pelota(void *arg) {
                 pelota_dir_y *= -1;  // Rebota en la parte superior
             }
 
-            // Lógica del "Game Over"
+            // Logica del "Game Over"
             if (pelota_y >= alto_pantalla + 1) {  // Si la pelota cae por debajo de la pantalla
                 game_over = true;
                 clear();  // Limpia la pantalla para mostrar el mensaje
