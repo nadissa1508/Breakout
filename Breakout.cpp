@@ -9,14 +9,14 @@ Vianka Vanessa Castro Ordoñez - 23201
 Genser Andree Catalan Espina - 23401
 Angie Nadissa Vela Lopez - 23764
 
-Fecha: 10/../2024
+Fecha: 10/21/2024
 Proyecto: Breakout implementado con Phtreads
 Archivo: Breakout.cpp
 
 Descripción: Este programa simula el clásico juego Breakout,
 utilizando programación multihilo mediante Phtreads para
 dividir las tareas de control de la pelota, palas y bloques. 
-Se empleo la biblioteca ncurses para mostrar el jeugo en la terminal. 
+Se empleo la biblioteca ncurses para mostrar el juego en la terminal. 
 ---------------------------------------*/
 
 /*Bibliotecas importadas*/
@@ -351,9 +351,9 @@ void *logica_pelota(void *arg) {
                 //Modo de dos jugadores
                 else {
                     if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!",puntos_jugador1);
                     } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!",puntos_jugador2);
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
@@ -375,9 +375,9 @@ void *logica_pelota(void *arg) {
                 // Modo de dos jugadores
                 else {
                     if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 1");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!", puntos_jugador1);
                     } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Jugador con más puntos: 2");
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!", puntos_jugador2);
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
@@ -521,17 +521,6 @@ void *logica_pala2(void *arg)
     return NULL;
 }
 
-/*Funcion sumar_puntaje
-*/
-void *sumar_puntaje(void *arg)
-{
-    return NULL;
-}
-/*Funcion verificar_puntaje
-*/
-void verificar_puntaje()
-{
-}
 /*Funcion titulo
 Descripción: Imprimir el titulo del juego
 */
@@ -621,12 +610,13 @@ int main()
     // Preguntar la dificultad
     mvprintw(11,0, "Seleccione la dificultad: \n");
     mvprintw(12, 0, "1. Modo Fácil\n");
-    mvprintw(13, 0, "2. Modo Difícil\n");
-    mvprintw(14, 0, ">> ");
+    mvprintw(13, 0, "2. Modo Intermedio\n");
+    mvprintw(14, 0, "3. Modo Hardcore\n");
+    mvprintw(15, 0, ">> ");
     refresh();
 
      // Leer entrada para el modo de juego
-    if (scanw("%d", &modo) != 1 || (modo != 1 && modo != 2)) {
+    if (scanw("%d", &modo) != 1 || (modo < 1 || modo > 3)) {
         mvprintw(15, 0, "Error: Entrada no válida.");
         refresh();
         endwin(); // terminar ncurses
@@ -636,8 +626,10 @@ int main()
     // Determinar la velocidad en función de la dificultad
     if (modo == 1) {
         velocidad_pelota = 300000; // Modo Fácil 
-    } else {
-        velocidad_pelota = 150000; // Modo Difícil 
+    } else if (modo == 2){
+        velocidad_pelota = 150000; // Modo Medio 
+    }else{
+        velocidad_pelota = 100000; // Modo Dificil
     }
 
     // Inicializar hilos y variables 
@@ -661,8 +653,6 @@ int main()
 
     // Crear hilo bloques
     pthread_create(&hilo_bloques, NULL, crear_bloques, (void *)&id_bloques);
-
-   // pthread_create(&hilo_pelota, NULL, logica_pelota, NULL);        //PRUEBA2
 
 
     if (n == 2) {
