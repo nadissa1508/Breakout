@@ -217,7 +217,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     blockCount++; 
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n3[i][j].getValorBloque();
-                    }else{
+                    }else if (idJugador == 2){
                         puntaje_jugador2 += matriz_n3[i][j].getValorBloque();
                     }
                     actualizar_pantalla();
@@ -237,9 +237,9 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     pthread_mutex_lock(&points_mutex);
                     matriz_n2[i][j].setEstado(0);
                     blockCount++; 
-                    if(idJugador == 2){
+                    if(idJugador == 1){
                         puntaje_jugador1 += matriz_n2[i][j].getValorBloque();
-                    }else{
+                    }else if (idJugador == 2){
                         puntaje_jugador2 += matriz_n2[i][j].getValorBloque();
                     }
                     actualizar_pantalla();
@@ -261,7 +261,7 @@ bool destruir_bloque(int x, int y, int idJugador) {
                     blockCount++; 
                     if(idJugador == 1){
                         puntaje_jugador1 += matriz_n1[i][j].getValorBloque();
-                    }else{
+                    }else if(idJugador == 2){
                         puntaje_jugador2 += matriz_n1[i][j].getValorBloque();
                     }
                     actualizar_pantalla();
@@ -321,8 +321,7 @@ se redibuje otra vez
 void *logica_pelota(void *arg) {
     int velocidad_pelota = *(int*)arg; // Recibir la velocidad de la pelota
     int num_jugador = 1;  // Variable para definir qué jugador fue el último en tocar la pelota
-    int puntos_jugador1 = 0; // Puntos del jugador 1
-    int puntos_jugador2 = 0; // Puntos del jugador 2
+                            //se usará con función de colisión pala 1 y 2
 
     while (!game_over) {
         pthread_mutex_lock(&ball_mutex);  // Asegura el acceso exclusivo a la pelota
@@ -338,13 +337,6 @@ void *logica_pelota(void *arg) {
             // Comprobar colisión con bloques
             bool block_hit = destruir_bloque(new_x, new_y, num_jugador);
             if (block_hit) {
-                // Incrementar puntos
-                if (num_jugador == 1) {
-                    puntos_jugador1++;
-                } else if (num_jugador == 2) {
-                    puntos_jugador2++;
-                }
-
                 // Cambiar dirección basado en desde dónde vino la pelota
                 pelota_dir_y *= -1;
             } else {
@@ -373,10 +365,10 @@ void *logica_pelota(void *arg) {
                 }
                 //Modo de dos jugadores
                 else {
-                    if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!",puntos_jugador1);
-                    } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!",puntos_jugador2);
+                    if (puntaje_jugador1 > puntaje_jugador2) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!", puntaje_jugador1);
+                    } else if (puntaje_jugador2 > puntaje_jugador1) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!", puntaje_jugador2);
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
@@ -397,10 +389,10 @@ void *logica_pelota(void *arg) {
                 }
                 // Modo de dos jugadores
                 else {
-                    if (puntos_jugador1 > puntos_jugador2) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!", puntos_jugador1);
-                    } else if (puntos_jugador2 > puntos_jugador1) {
-                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!", puntos_jugador2);
+                    if (puntaje_jugador1 > puntaje_jugador2) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 1 con %d puntos!", puntaje_jugador1);
+                    } else if (puntaje_jugador2 > puntaje_jugador1) {
+                        mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Game Over, Gano Jugador 2 con %d puntos!", puntaje_jugador2);
                     } else {
                         mvprintw(alto_pantalla / 2, ancho_pantalla / 2 - 7, "Empate, Game Over");
                     }
