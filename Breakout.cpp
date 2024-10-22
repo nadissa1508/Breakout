@@ -101,6 +101,7 @@ bool game_over = false;
 pthread_mutex_t ball_mutex;
 pthread_mutex_t paddle_mutex;
 pthread_mutex_t points_mutex;
+pthread_mutex_t screen_mutex;
 pthread_barrier_t barrera;
 
 /* Funcion crear_bloques
@@ -143,6 +144,7 @@ que ocurre un cambio
 */
 void actualizar_pantalla()
 {
+    pthread_mutex_lock(&screen_mutex);
     clear();
 
     // impresion bloques + -> nivel 3
@@ -190,8 +192,9 @@ void actualizar_pantalla()
 
     //Contador de bloques destruidos 
     mvprintw(16, 0, "Bloques destruidos: %d", blockCount);
-
     refresh();
+    pthread_mutex_unlock(&screen_mutex);
+    usleep(1000);
 }
 
 /* destruir_bloque
@@ -660,6 +663,7 @@ int main()
     pthread_mutex_init(&ball_mutex, NULL);
     pthread_mutex_init(&paddle_mutex, NULL);
     pthread_mutex_init(&points_mutex, NULL);
+    pthread_mutex_init(&screen_mutex, NULL);
     pthread_barrier_init(&barrera, NULL, 2);
     
     // Hilo que controla los inputs del usuario
@@ -699,6 +703,7 @@ int main()
     pthread_mutex_destroy(&ball_mutex);
     pthread_mutex_destroy(&paddle_mutex);
     pthread_mutex_destroy(&points_mutex);
+    pthread_mutex_destroy(&screen_mutex);
     pthread_barrier_destroy(&barrera);
 
     // Esperar una tecla para salir
