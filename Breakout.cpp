@@ -278,13 +278,33 @@ false: existen bloques en el juego
 true: todos los bloques han sido destruidos
 */
 bool todos_bloques_destruidos() {
+    // Verificar bloques de resistencia 3 (matriz_n3)
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 20; j++) {
-            if (matriz_n3[i][j].getEstado() == 1 || matriz_n2[i][j].getEstado() == 1 || matriz_n1[i][j].getEstado() == 1) {
+            if (matriz_n3[i][j].getEstado() == 1) {
                 return false;  // Aún hay bloques en pie
             }
         }
     }
+
+    // Verificar bloques de resistencia 2 (matriz_n2)
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n2[i][j].getEstado() == 1) {
+                return false;  // Aún hay bloques en pie
+            }
+        }
+    }
+
+    // Verificar bloques de resistencia 1 (matriz_n1)
+    for (int i = 0; i < 3; i++) {
+        for (int j = 0; j < 20; j++) {
+            if (matriz_n1[i][j].getEstado() == 1) {
+                return false;  // Aún hay bloques en pie
+            }
+        }
+    }
+
     return true;  // Todos los bloques han sido destruidos
 }
 
